@@ -23,6 +23,7 @@ import Xlib
 import Xlib.display
 import time
 from extensions import main
+import xprintidle
 
 # Connect to the X server and get the root window
 disp = Xlib.display.Display()
@@ -36,6 +37,7 @@ WM_NAME = disp.intern_atom('WM_NAME')           # Legacy encoding
 last_seen = {'xid': None, 'title': None}
 app_list = []
 start = [None]
+idle = [None]
 
 
 @contextmanager
@@ -109,8 +111,7 @@ def handle_xevent(event):
     # Loop through, ignoring events until we're notified of focus/title change
     if event.type != Xlib.X.PropertyNotify:
         return
-    if event.type == Xlib.X.KeyPress:
-        return event.type;
+
     changed = False
     if event.atom == NET_ACTIVE_WINDOW:
         if get_active_window()[1]:
@@ -133,18 +134,33 @@ def add_app(window):
         return None
 
 
+def idle_time():
+    while xprintidle.idle_time() < 10*1000:
+        pass
+    else:
+        print('Started idle')
+        idle_start = time.time()
+        while xprintidle.idle_time() >= 10*1000:
+            pass
+        else:
+            idle_end = time.time()
+            print('Ended idle')
+            print('Time in idle: %s' % (idle_end - idle_start))
+
+
 def handle_change(new_state):
     if start[0] is not None:
         end = time.time()
-        time_length = end - start[0]
-        print('time in app: ' + str(time_length))
+        time_length = (end - start[0])
+        print('time in app: %d s' % str(time_length))
 
     app_name = add_app(new_state)
     if app_name is not None:
-        print('New app opened: ' + app_name)
+        print('New app opened: %s' % app_name)
 
     print('New window active - xid: %d, title: %s' % (new_state['xid'], new_state['title']))
     start[0] = time.time()
+
 
 if __name__ == '__main__':
     # Listen for _NET_ACTIVE_WINDOW changes
@@ -153,7 +169,8 @@ if __name__ == '__main__':
     # Prime last_seen with whatever window was active when we started this
     get_window_name(get_active_window()[0])
     handle_change(last_seen)
-    main()
 
     while True:  # next_event() sleeps until we get an event
+        idle_time()
         handle_xevent(disp.next_event())
+
