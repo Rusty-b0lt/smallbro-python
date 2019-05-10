@@ -135,7 +135,9 @@ def add_app(window):
 
 
 def idle_time():
-    while xprintidle.idle_time() < 10*1000:
+    # Idle time count
+    wait = 10  # wait time before starting idle count
+    while xprintidle.idle_time() < wait*1000:
         pass
     else:
         print('Started idle')
@@ -173,4 +175,3 @@ if __name__ == '__main__':
     while True:  # next_event() sleeps until we get an event
         idle_time()
         handle_xevent(disp.next_event())
-
