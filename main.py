@@ -19,10 +19,10 @@ so it only reacts to title changes once.
 """
 
 from contextlib import contextmanager
+from threading import Thread
 import Xlib
 import Xlib.display
 import time
-from extensions import main
 import xprintidle
 
 # Connect to the X server and get the root window
@@ -136,25 +136,26 @@ def add_app(window):
 
 def idle_time():
     # Idle time count
-    wait = 10  # wait time before starting idle count
-    while xprintidle.idle_time() < wait*1000:
-        pass
-    else:
-        print('Started idle')
-        idle_start = time.time()
-        while xprintidle.idle_time() >= 10*1000:
+    while True:
+        wait = 10  # wait time before starting idle count
+        while xprintidle.idle_time() < wait*1000:
             pass
         else:
-            idle_end = time.time()
-            print('Ended idle')
-            print('Time in idle: %s' % (idle_end - idle_start))
+            print('Started idle')
+            idle_start = time.time()
+            while xprintidle.idle_time() >= 10*1000:
+                pass
+            else:
+                idle_end = time.time()
+                print('Ended idle')
+                print('Time in idle: %s' % (idle_end - idle_start))
 
 
 def handle_change(new_state):
     if start[0] is not None:
         end = time.time()
         time_length = (end - start[0])
-        print('time in app: %d s' % str(time_length))
+        print('time in app: %s s' % str(time_length))
 
     app_name = add_app(new_state)
     if app_name is not None:
@@ -162,6 +163,11 @@ def handle_change(new_state):
 
     print('New window active - xid: %d, title: %s' % (new_state['xid'], new_state['title']))
     start[0] = time.time()
+
+
+def main_loop():
+        while True:
+            handle_xevent(disp.next_event())
 
 
 if __name__ == '__main__':
@@ -172,6 +178,11 @@ if __name__ == '__main__':
     get_window_name(get_active_window()[0])
     handle_change(last_seen)
 
-    while True:  # next_event() sleeps until we get an event
-        idle_time()
-        handle_xevent(disp.next_event())
+    t1 = Thread(target=main_loop)
+    t2 = Thread(target=idle_time)
+    t1.setDaemon(True)
+    t2.setDaemon(True)
+    t1.start()
+    t2.start()
+    while True:
+        pass
