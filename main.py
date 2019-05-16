@@ -138,21 +138,25 @@ def idle_time():
     # Idle time count
     while True:
         wait = 10  # wait time in seconds before starting idle count
-        while xprintidle.idle_time() < wait*1000:
+        while xprintidle.idle_time() < wait*1000: # waiting for idle to start
             pass
         else:
+            # getting time in previous window
             end = time.time()
             time_length = (end - start[0] - wait)
             print('Time in app %s' % str(time_length))
             start[0] = None
+            # starting idle
             print('Started idle')
             idle_start = time.time()
-            while xprintidle.idle_time() >= 10*1000:
+            while xprintidle.idle_time() >= 10*1000: # waiting for user action
                 pass
             else:
+                # ending idle
                 idle_end = time.time()
                 print('Ended idle')
                 print('Time in idle: %s' % (idle_end - idle_start + wait))
+                # getting window after idle end
                 get_window_name(get_active_window()[0])
                 handle_change(last_seen)
 
