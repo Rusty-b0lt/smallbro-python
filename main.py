@@ -155,7 +155,7 @@ def handle_change(new_state):
     if start[0] is not None:
         end = time.time()
         time_length = (end - start[0])
-        print('time in app: %s s' % str(time_length))
+        print('time in app: %s' % str(time_length))
 
     app_name = add_app(new_state)
     if app_name is not None:
