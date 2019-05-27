@@ -20,6 +20,7 @@ so it only reacts to title changes once.
 
 from contextlib import contextmanager
 from threading import Thread
+import extensions
 import Xlib
 import Xlib.display
 import time
@@ -36,7 +37,10 @@ WM_NAME = disp.intern_atom('WM_NAME')           # Legacy encoding
 
 last_seen = {'xid': None, 'title': None}
 app_list = []
-start = [None]
+previous = {
+    'start': None,
+    'app_name': None
+}
 idle = [None]
 
 
@@ -142,14 +146,16 @@ def idle_time():
             pass
         else:
             # getting time in previous window
-            end = time.time()
-            time_length = (end - start[0] - wait)
-            print('Time in app %s' % str(time_length))
-            start[0] = None
+            if previous['start'] is not None:
+                end = time.time()
+                time_length = (end - previous['start'] - wait)
+                print('Time in app %s' % str(time_length))
+                previous['start'] = None
+                previous['app_name'] = None
             # starting idle
             print('Started idle')
             idle_start = time.time()
-            while xprintidle.idle_time() >= 10*1000: # waiting for user action
+            while xprintidle.idle_time() >= 10*1000:  # waiting for user action
                 pass
             else:
                 # ending idle
@@ -162,17 +168,29 @@ def idle_time():
 
 
 def handle_change(new_state):
-    if start[0] is not None:
+    app_name = new_state['title'].split(' - ')[-1]
+    if previous['start'] is not None and previous['app_name'] is not None:
         end = time.time()
-        time_length = (end - start[0])
-        print('time in app: %s' % str(time_length))
+        time_length = (end - previous['start'])
+        if extensions.status():
+            if previous['app_name'] != 'Google Chrome':
+                print('time in window: %s' % str(time_length))
+            if previous['app_name'] == 'Google Chrome' and app_name != 'Google Chrome':
+                print('time in tab: %s' % str(time_length))
+        else:
+            print('time in app: %s' % str(time_length))
 
-    app_name = add_app(new_state)
-    if app_name is not None:
+    app = add_app(new_state)
+    if app is not None:
         print('New app opened: %s' % app_name)
+    if extensions.status():
+        if app_name != 'Google Chrome':
+            print('New window active - xid: %d, title: %s' % (new_state['xid'], new_state['title']))
+    else:
+        print('New window active - xid: %d, title: %s' % (new_state['xid'], new_state['title']))
 
-    print('New window active - xid: %d, title: %s' % (new_state['xid'], new_state['title']))
-    start[0] = time.time()
+    previous['start'] = time.time()
+    previous['app_name'] = app_name
 
 
 def main_loop():
@@ -190,9 +208,12 @@ if __name__ == '__main__':
 
     t1 = Thread(target=main_loop)
     t2 = Thread(target=idle_time)
+    t3 = Thread(target=extensions.extensions_main)
     t1.setDaemon(True)
     t2.setDaemon(True)
+    t3.setDaemon(True)
     t1.start()
     t2.start()
+    t3.start()
     while True:
         pass
