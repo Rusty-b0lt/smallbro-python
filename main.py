@@ -174,7 +174,7 @@ def handle_change(new_state):
         time_length = (end - previous['start'])
         if extensions.status():
             if previous['app_name'] != 'Google Chrome':
-                print('time in window: %s' % str(time_length))
+                print('time in %s: %s' % (str(previous['app_name']), str(time_length)))
             if previous['app_name'] == 'Google Chrome' and app_name != 'Google Chrome':
                 print('time in tab: %s' % str(time_length))
         else:
