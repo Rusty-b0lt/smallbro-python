@@ -141,23 +141,22 @@ def add_app(window):
 def idle_time():
     # Idle time count
     while True:
-        wait = 10  # wait time in seconds before starting idle count
-        while xprintidle.idle_time() < wait*1000: # waiting for idle to start
-            pass
-        else:
+        wait = 5  # wait time in seconds before starting idle count
+        done = 0
+        while xprintidle.idle_time() > wait*1000:
             # getting time in previous window
-            if previous['start'] is not None:
-                end = time.time()
-                time_length = (end - previous['start'] - wait)
-                print('Time in app %s' % str(time_length))
-                previous['start'] = None
-                previous['app_name'] = None
-            # starting idle
-            print('Started idle')
-            idle_start = time.time()
-            while xprintidle.idle_time() >= 10*1000:  # waiting for user action
-                pass
-            else:
+            if done == 0:
+                if previous['start'] is not None:
+                    end = time.time()
+                    time_length = (end - previous['start'] - wait)
+                    print('Time in app/tab %s' % str(time_length))
+                    previous['start'] = None
+                    previous['app_name'] = None
+                # starting idle
+                print('Started idle')
+                idle_start = time.time()
+                done = 1
+            while xprintidle.idle_time() < wait*1000:
                 # ending idle
                 idle_end = time.time()
                 print('Ended idle')
@@ -165,6 +164,7 @@ def idle_time():
                 # getting window after idle end
                 get_window_name(get_active_window()[0])
                 handle_change(last_seen)
+                break
 
 
 def handle_change(new_state):
