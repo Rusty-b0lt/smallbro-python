@@ -168,29 +168,28 @@ def idle_time():
                 break
 
 
-def handle_change(new_state):
-    app_name = new_state['title'].split(' - ')[-1]
+def windows(new_state):
     if previous['start'] is not None and previous['app_name'] is not None:
         end = time.time()
         time_length = (end - previous['start'])
-        if extensions.status():
-            if previous['app_name'] != 'Google Chrome':
-                print('time in %s: %s' % (str(previous['app_name']), str(time_length)))
-            if previous['app_name'] == 'Google Chrome' and app_name != 'Google Chrome':
-                print('time in tab: %s' % str(time_length))
-        else:
-            print('time in app: %s' % str(time_length))
+        print('time in %s: %s' % (str(previous['app_name']), str(time_length)))
 
+    print('New window active - xid: %d, title: %s' % (new_state['xid'], new_state['title']))
+    previous['start'] = time.time()
+
+
+def handle_change(new_state):
+    app_name = new_state['title'].split(' - ')[-1]
+    print(app_name)
     app = add_app(new_state)
     if app is not None:
         print('New app opened: %s' % app_name)
-    if extensions.status():
-        if app_name != 'Google Chrome':
-            print('New window active - xid: %d, title: %s' % (new_state['xid'], new_state['title']))
+    if app_name == 'Google Chrome':
+        extensions.start_server()
     else:
-        print('New window active - xid: %d, title: %s' % (new_state['xid'], new_state['title']))
+        extensions.stop_server()
+        windows(new_state)
 
-    previous['start'] = time.time()
     previous['app_name'] = app_name
 
 
@@ -209,12 +208,9 @@ if __name__ == '__main__':
 
     t1 = Thread(target=main_loop)
     t2 = Thread(target=idle_time)
-    t3 = Thread(target=extensions.extensions_main)
     t1.setDaemon(True)
     t2.setDaemon(True)
-    t3.setDaemon(True)
     t1.start()
     t2.start()
-    t3.start()
     while True:
         pass
