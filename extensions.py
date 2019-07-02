@@ -15,6 +15,7 @@ def extensions_main():
 
     async def geturl(websocket, path):
         while True:
+            try:
                 result = await websocket.recv()
                 if start[0] is not None:
                     end = time.time()
@@ -29,6 +30,8 @@ def extensions_main():
                 if url is not 'false':
                     print('url: ' + url)
                 start[0] = time.time()
+            except websockets.ConnectionClosed:
+                break
 
     start_server = websockets.serve(geturl, '127.0.0.1', 5678)
 
