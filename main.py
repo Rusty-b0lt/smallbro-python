@@ -164,6 +164,7 @@ def idle_time():
                 # getting window after idle end
                 get_window_name(get_active_window()[0])
                 handle_change(last_seen)
+                done = 0
                 break
 
 
