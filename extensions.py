@@ -3,11 +3,6 @@ import websockets
 import time
 from tornado.platform.asyncio import AnyThreadEventLoopPolicy
 
-asyncio.set_event_loop_policy(AnyThreadEventLoopPolicy())
-start = [None]
-previous_time = [None]
-stop = asyncio.Future
-
 
 def status():
     return True
