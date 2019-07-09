@@ -25,6 +25,9 @@ import Xlib
 import Xlib.display
 import time
 import xprintidle
+import mysql.connector
+import re
+import datetime
 
 # Connect to the X server and get the root window
 disp = Xlib.display.Display()
@@ -35,6 +38,10 @@ NET_ACTIVE_WINDOW = disp.intern_atom('_NET_ACTIVE_WINDOW')
 NET_WM_NAME = disp.intern_atom('_NET_WM_NAME')  # UTF-8
 WM_NAME = disp.intern_atom('WM_NAME')           # Legacy encoding
 
+# Mysql
+cnx = mysql.connector.connect(user='root', password='LoveSosa1337', host='127.0.0.1', database='smallbro')
+cursor = cnx.cursor()
+
 last_seen = {'xid': None, 'title': None}
 app_list = []
 previous = {
@@ -42,7 +49,6 @@ previous = {
     'app_name': None
 }
 idle = [None]
-
 
 @contextmanager
 def window_obj(win_id):
@@ -131,17 +137,28 @@ def add_app(window):
     # Gets app name from window title
     title = window['title']
     app_name = title.split(' - ')[-1]
-    if app_name not in app_list:
-        app_list.append(app_name)
-        return app_name
+
+    # Telegram
+    telegram = re.compile('Telegram \(\d*\)')
+    if re.match(telegram, app_name):
+        app_name = 'Telegram'
+
+    # Inserting into db
+    cursor.execute("SELECT COUNT(1) FROM apps WHERE name = '{}'".format(app_name))
+    exists = cursor.fetchone()[0]
+    if exists == 0:
+        cursor.execute("INSERT INTO apps (name) VALUES ('{}')".format(app_name))
+        cnx.commit()
     else:
-        return None
+        pass
+
+    return app_name
 
 
 def idle_time():
     # Idle time count
     while True:
-        wait = 5  # wait time in seconds before starting idle count
+        wait = 5*60  # wait time in seconds before starting idle count
         done = 0
         while xprintidle.idle_time() > wait*1000:
             # getting time in previous window
@@ -169,23 +186,24 @@ def idle_time():
 
 
 def handle_change(new_state):
-    app_name = new_state['title'].split(' - ')[-1]
+    app_name = add_app(new_state)
     if previous['start'] is not None and previous['app_name'] is not None:
         end = time.time()
-        time_length = (end - previous['start'])
+        time_length = int(round(end - previous['start']))
         if extensions.status():
-            if previous['app_name'] != 'Google Chrome':
+            if previous['app_name'] != 'Google Chrome' or (previous['app_name'] == 'Google Chrome' and app_name != 'Google Chrome'):
+                cursor.execute("UPDATE sessions SET duration = {} WHERE user_id = 1 ORDER BY id DESC LIMIT 1".format(time_length))
+                cnx.commit()
                 print('time in %s: %s' % (str(previous['app_name']), str(time_length)))
-            if previous['app_name'] == 'Google Chrome' and app_name != 'Google Chrome':
-                print('time in tab: %s' % str(time_length))
         else:
             print('time in app: %s' % str(time_length))
 
-    app = add_app(new_state)
-    if app is not None:
-        print('New app opened: %s' % app_name)
+    cursor.execute("SELECT id FROM apps WHERE name = '{}'".format(app_name))
+    app_id = cursor.fetchone()[0]
     if extensions.status():
         if app_name != 'Google Chrome':
+            cursor.execute("INSERT INTO sessions (user_id, date, app_id) VALUES (1, '{}', '{}')".format(datetime.datetime.today(), app_id))
+            cnx.commit()
             print('New window active - xid: %d, title: %s' % (new_state['xid'], new_state['title']))
     else:
         print('New window active - xid: %d, title: %s' % (new_state['xid'], new_state['title']))
