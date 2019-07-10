@@ -50,6 +50,7 @@ def extensions_main():
                     app_id = cursor.fetchone()[0]
                     # Inserting into sessions
                     cursor.execute("INSERT INTO sessions (user_id, date, app_id) VALUES (1, '{}', '{}')".format(datetime.datetime.today(), app_id))
+                    cnx.commit()
                     print('event: ' + event)
                     print('url: ' + url)
                 start[0] = time.time()
