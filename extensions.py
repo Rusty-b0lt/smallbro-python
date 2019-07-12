@@ -2,12 +2,12 @@ import asyncio
 import websockets
 import time
 from tornado.platform.asyncio import AnyThreadEventLoopPolicy
-import mysql.connector
 import re
 import datetime
+import mysql_setup
 
 # Mysql setup
-cnx = mysql.connector.connect(user='root', password='LoveSosa1337', host='127.0.0.1', database='smallbro')
+cnx = mysql_setup.setup()
 cursor = cnx.cursor()
 
 
@@ -36,7 +36,6 @@ def extensions_main():
                     search = re.search('^(https?://)?(w{3}\.)?([^/:]+)/?.*$', url)
                     if search:
                         url_re = search.group(3)
-                        print(url_re)
                     else:
                         url_re = url
 

@@ -20,14 +20,16 @@ so it only reacts to title changes once.
 
 from contextlib import contextmanager
 from threading import Thread
+from getpass import getpass
 import extensions
 import Xlib
 import Xlib.display
 import time
 import xprintidle
-import mysql.connector
 import re
 import datetime
+import mysql_setup
+import bcrypt
 
 # Connect to the X server and get the root window
 disp = Xlib.display.Display()
@@ -39,8 +41,8 @@ NET_WM_NAME = disp.intern_atom('_NET_WM_NAME')  # UTF-8
 WM_NAME = disp.intern_atom('WM_NAME')           # Legacy encoding
 
 # Mysql
-cnx = mysql.connector.connect(user='root', password='LoveSosa1337', host='127.0.0.1', database='smallbro')
-cursor = cnx.cursor()
+cnx = mysql_setup.setup()
+cursor = cnx.cursor(buffered=True)
 
 last_seen = {'xid': None, 'title': None}
 app_list = []
@@ -49,6 +51,7 @@ previous = {
     'app_name': None
 }
 idle = [None]
+signin = [0]
 
 @contextmanager
 def window_obj(win_id):
@@ -213,26 +216,47 @@ def handle_change(new_state):
 
 
 def main_loop():
-        while True:
-            handle_xevent(disp.next_event())
+    while True:
+        handle_xevent(disp.next_event())
+
+
+def checkpw(email, password):
+    cursor.execute("SELECT pwd_hash FROM users WHERE email = '{}'".format(email))
+    if cursor.rowcount != 0:
+        pwd_hash = cursor.fetchone()[0]
+        password_bytes = bytes(password, encoding='utf-8')
+        pwd_hash = bytes(pwd_hash, encoding='utf-8')
+        check = bcrypt.checkpw(password_bytes, pwd_hash)
+        return check
+    else:
+        return False
 
 
 if __name__ == '__main__':
-    # Listen for _NET_ACTIVE_WINDOW changes
-    root.change_attributes(event_mask=Xlib.X.PropertyChangeMask)
+    while signin[0] == 0:
+        email = input('Email: ')
+        password = getpass()
+        if checkpw(email, password):
+            # Listen for _NET_ACTIVE_WINDOW changes
+            root.change_attributes(event_mask=Xlib.X.PropertyChangeMask)
 
-    # Prime last_seen with whatever window was active when we started this
-    get_window_name(get_active_window()[0])
-    handle_change(last_seen)
+            # Prime last_seen with whatever window was active when we started this
+            get_window_name(get_active_window()[0])
+            handle_change(last_seen)
 
-    t1 = Thread(target=main_loop)
-    t2 = Thread(target=idle_time)
-    t3 = Thread(target=extensions.extensions_main)
-    t1.setDaemon(True)
-    t2.setDaemon(True)
-    t3.setDaemon(True)
-    t1.start()
-    t2.start()
-    t3.start()
+            t1 = Thread(target=main_loop)
+            t2 = Thread(target=idle_time)
+            t3 = Thread(target=extensions.extensions_main)
+            t1.setDaemon(True)
+            t2.setDaemon(True)
+            t3.setDaemon(True)
+            t1.start()
+            t2.start()
+            t3.start()
+            signin[0] = 1
+        else:
+            print('Invalid email or password, try again')
+
     while True:
         pass
+
