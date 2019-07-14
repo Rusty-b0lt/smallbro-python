@@ -18,8 +18,13 @@ chrome.tabs.onActivated.addListener(function(activeInfo) {
   	}
   });
 });
-socket.onclose = function(event) {
-  if (event.wasClean) {
-  	socket.send('ConnectionClosed, None')
-  } 
-}
+socket.onmessage = function(event) {
+	console.log(event.data);
+	if(event.data === 'getTab') {
+		chrome.tabs.getCurrent(function(tab) {
+            if(tab.url !== undefined) {
+                socket.send(tab.url)
+            }
+        });
+	}
+};
